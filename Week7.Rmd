@@ -1,0 +1,17 @@
+---
+title: "Week7"
+output: html_document
+---
+
+```{r}
+fit_control <-trainControl(method = "cv",number = 3,classProbs = TRUE,summaryFunction = twoClassSummary)
+nnet_params <-expand.grid(size =seq(from = 2, to = 40, by = 1),decay = 5e-4)
+head(nnet_params)
+
+m.ann <-train(party_A~.,data = d.train,method = "nnet",metric = "ROC",trControl = fit_control,tuneGrid = nnet_params,trace = FALSE)
+print((m.ann))
+
+
+
+```
+

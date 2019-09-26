@@ -1,0 +1,409 @@
+---
+title: "MLP_beta"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, message=FALSE}
+library(data.table)
+library(plyr)
+library(dplyr)
+library(tidyverse)
+library(mlr)
+```
+
+```{r}
+d.cl <- fread("processed.cleveland.csv", na.strings = "?", stringsAsFactors = FALSE, header = FALSE)
+d.hung <- fread("processed.hungarian.csv",  na.strings = "?", stringsAsFactors = FALSE, header = FALSE)
+d.va <- fread("processed.va.csv",  na.strings = "?", stringsAsFactors = FALSE, header = FALSE)
+d.swiss <- fread("processed.switzerland.csv",  na.strings = "?", stringsAsFactors = FALSE, header = FALSE)
+```
+
+```{r}
+
+d.merge <- rbind(d.cl, d.hung, d.va, d.swiss)
+
+names(d.merge) <- c('Age', 'Gender', 'CP', 'Trestbps', 'Chol', 'FBS', 'RestECG',
+                 'Thalach', 'Exang', 'Oldpeak', 'Slope', 'CA', 'Thal', 'Goal')
+```
+
+```{r}
+str(d.merge)
+```
+
+```{r}
+summarizeColumns(d.merge) %>% knitr::kable( caption =  'Feature Summary before Data Preprocessing')
+```
+
+Fourthly, in the Goal column clinicians had graded patients as either having no heart disease (value of 0) or displaying various degrees of heart disease (values 1 to 4). We chose to group the data into 2 categories of ‘no heart disease’ (value of 0) and ‘displaying heart disease’ (value of 1) so it became binary.
+
+It was noted that a higher proportion of people were diagnosed with heart disease. Therefore, we may require additional parameter-tuning in building models to cater for such an unbalanced class.
+
+```{r}
+d.merge$Goal[d.merge$Goal == 2] <- 1
+d.merge$Goal[d.merge$Goal == 3] <- 1
+d.merge$Goal[d.merge$Goal == 4] <- 1
+#d.merge$Disease <- factor(d.merge$Goal, labels = c("No Disease", "Heart Disease"))
+table(d.merge$Goal) %>% knitr::kable(caption = 'Degree of Heart Disease')
+```
+
+We should be concerned about the large number of missing values for the Slope (slope of the peak exercise ST segment), CA (number of major vessels) and Thal (β-Thalassemia cardiomyopathy) features. The number of missing datapoints represents 33% of the Slope, 66% of the CA and 53% of the Thal data. Since the percentage of missing data or the CA feature was greater than 60%, and was unlikely to add significant information, we could to remove this feature from the dataset. (I already have, oops)
+
+I wanted to consult with y'all about the Slope and Thal features becuase they are < 60%
+
+```{r}
+d.merge <- d.merge[,-12]
+```
+
+Inspection of the dataset showed that features associated with the Exercise Thread Mill Test (i.e. Trestbps, Thalach, Exang and Oldpeak) were missing for some patients indicating they did not undergo this test. Rows containing these missing values were removed since they represent less than 6% of the overall dataset (i.e. 55 out of 920 instances).
+
+```{r}
+d.merge <- d.merge[!is.na(d.merge$Trestbps),]
+```
+
+In addition, several rows were missing data for Chol, Thal and Slope. These rows were also removed as they comprise only 3% of the total dataset. Several additional rows of the Thal (β-Thalassemia) and Slope (slope of the peak exercise ST segment) feature columns that were missing values were replaced with ‘unknown’. It was assumed that these patients were not tested for the inherited blood disorder β-Thalassemia. It also appeared that the slope of the peak exercise ST segment was not documented even though several of these patients were diagnosed with ST-T wave abnormalities from the electrocardiographic test.
+
+```{r}
+d.merge <- d.merge[!is.na(d.merge$Chol),]
+d.merge <- d.merge[!is.na(d.merge$RestECG),]
+d.merge <- d.merge[!is.na(d.merge$Oldpeak),]
+d.merge <- d.merge[!is.na(d.merge$FBS),]
+
+d.merge$Thal <- as.character(d.merge$Thal)
+d.merge$Thal[is.na(d.merge$Thal)] <- "unknown"
+
+d.merge$Slope <- as.character(d.merge$Slope)
+d.merge$Slope[is.na(d.merge$Slope)] <- "unknown"
+```
+
+
+```{r}
+library(caret) 
+
+d.merge$Gender <- as.factor(d.merge$Gender)
+d.merge$Goal <- as.factor(d.merge$Goal)
+d.merge$CP <- as.factor(d.merge$CP)
+d.merge$FBS <- as.factor(d.merge$FBS)
+d.merge$RestECG <- as.factor(d.merge$RestECG)
+d.merge$Exang <- as.factor(d.merge$Exang)
+d.merge$Slope <- as.factor(d.merge$Slope)
+d.merge$Thal <- as.factor(d.merge$Thal)
+
+set.seed(123) 
+
+#creating indices
+trainIndex <- createDataPartition(d.merge$Goal,p=0.75,list=FALSE)
+
+#splitting data into training/testing data using the trainIndex object
+train <- d.merge[trainIndex,] #training data (75% of data)
+
+test <- d.merge[-trainIndex,] #testing data (25% of data)
+
+```
+
+```{r}
+glm.modISHAX <- glm(data = train, formula = Goal~., family = "binomial")
+summary(glm.modISHAX)
+
+vip <- varImp(glm.modISHAX)
+vip
+barplot.default(vip$Overall, names.arg = row.names(vip))
+```
+
+
+```{r}
+
+set.seed(456)
+p_mtry <- round(sqrt(ncol(train)))
+mtry_grid <- seq(p_mtry-2, p_mtry +2, by = 1)
+objGrid <- expand.grid(.mtry = mtry_grid)
+fitControl <- trainControl(method = "cv", number= 5)
+
+rf.model <- train(Goal ~ . ,
+                  data = train,
+                  method = "rf",
+                  tuneGrid = objGrid,
+                  ntree = 500, # change this manually
+                  trControl = fitControl) 
+print(rf.model)
+
+rf_pred<-predict(object=rf.model,test,type="prob")
+test$pred_outcome<-rf_pred$`1`
+
+rf_perf<-roc(response=test$Goal,
+              predictor=test$pred_outcome)
+## Setting levels: control = Yes, case = No
+## Setting direction: controls < cases
+# calculate AUC and CI
+print(pROC::auc(rf_perf))
+## Area under the curve: 0.5312
+print(pROC::ci.auc(rf_perf))
+
+```
+
+
+
+```{r}
+#load libraries
+library(data.table)
+library(mlr)
+library(xgboost)
+
+set.seed(69)
+
+#convert data frame to data table
+setDT(train)
+setDT(test)
+
+#check missing values
+table(is.na(train))
+sapply(train, function(x) sum(is.na(x))/length(x))*100
+table(is.na(test))
+sapply(test, function(x) sum(is.na(x))/length(x))*100
+
+#quick data cleaning
+#remove extra character from target variable
+
+#remove leading whitespaces
+# char_col <- colnames(train)[sapply(test,is.character)]
+# for(i in char_col)
+#       set(train,j=i,value = str_trim(train[[i]],side = "left"))
+# for(i in char_col)
+#       set(test,j=i,value = str_trim(test[[i]],side = "left"))
+
+#set all missing value as "Missing"
+train[is.na(train)] <- "Missing"
+test[is.na(test)] <- "Missing"
+
+#using one hot encoding
+labels <- train$Goal
+ts_label <- test$Goal
+new_tr <- model.matrix(~.+0,data = train[,-c("Goal"),with=F])
+new_ts <- model.matrix(~.+0,data = test[,-c("Goal"),with=F])
+
+#convert factor to numeric
+labels <- as.numeric(labels)-1
+ts_label <- as.numeric(ts_label)-1
+
+#preparing matrix
+dtrain <- xgb.DMatrix(data = new_tr,label = labels)
+dtest <- xgb.DMatrix(data = new_ts,label=ts_label)
+
+#default parameters
+paramss <- list(
+        booster = "gbtree",
+        objective = "binary:logistic",
+        eta=0.3,
+        gamma=0,
+        max_depth=6,
+        min_child_weight=1,
+        subsample=1,
+        colsample_bytree=1
+)
+
+xgbcv <- xgb.cv(params = paramss
+                ,data = dtrain
+                ,nrounds = 100
+                ,nfold = 5
+                ,showsd = T
+                ,stratified = T
+                ,print_every_n = 10
+                ,early_stopping_rounds = 20
+                ,maximize = F
+)
+##best iteration = 20
+
+min(xgbcv$test_error_mean)
+#0.1263
+
+#first default - model training
+xgb1 <- xgb.train(
+           params = params
+          ,data = dtrain
+          ,nrounds = 20
+          ,watchlist = list(val=dtest,train=dtrain)
+          ,print_every_n = 10
+          ,early_stopping_rounds = 10
+          ,maximize = F
+          ,eval_metric = "error"
+)
+
+#model prediction
+xgbpred <- predict(xgb1,dtest)
+
+max(xgb1$evaluation_log$train_auc)
+
+library(pROC) 
+
+roc_test <- roc(ts_label, xgbpred, algorithm = 2)
+plot(roc_test ) 
+auc(roc_test )
+coords(roc_test,"best")
+# roc_training <- roc(train_output_vec, train_predictions, algorithm = 2)
+# plot(roc_training)   
+# auc(roc_training)
+ 
+xgbpred = ifelse(xgbpred > 0.4356680, 1,0)
+confusionMatrix(as.factor(xgbpred), as.factor(ts_label))
+
+
+```
+
+```{r}
+
+library(mlr)
+#confusion matrix
+library(caret)
+
+#view variable importance plot
+mat <- xgb.importance(feature_names = colnames(new_tr),model = xgb1)
+xgb.plot.importance(importance_matrix = mat[1:20]) #first 20 variables
+
+#convert characters to factors
+fact_col <- colnames(train)[sapply(train,is.character)]
+for(i in fact_col)
+        set(train,j=i,value = factor(train[[i]]))
+for(i in fact_col)
+        set(test,j=i,value = factor(test[[i]]))
+
+#create tasks
+traintask <- makeClassifTask(data = as.data.frame(train),target = "Goal")
+testtask <- makeClassifTask(data = as.data.frame(test),target = "Goal")
+
+#do one hot encoding
+traintask <- createDummyFeatures(obj = traintask)
+testtask <- createDummyFeatures(obj = testtask)
+
+#create learner
+lrn <- makeLearner("classif.xgboost",predict.type = "response")
+lrn$par.vals <- list(
+             objective="binary:logistic",
+             eval_metric="error",
+             nrounds=100L,
+             eta=0.1
+)
+
+#set parameter space
+params <- makeParamSet(
+         makeDiscreteParam("booster",values = c("gbtree","dart")),
+         makeIntegerParam("max_depth",lower = 3L,upper = 10L),
+         makeNumericParam("min_child_weight",lower = 1L,upper = 10L),
+         makeNumericParam("subsample",lower = 0.5,upper = 1),
+         makeNumericParam("colsample_bytree",lower = 0.5,upper = 1)
+)
+
+#set resampling strategy
+rdesc <- makeResampleDesc("CV",stratify = T,iters=5L)
+
+#search strategy
+ctrl <- makeTuneControlRandom(maxit = 10L)
+
+#set parallel backend
+library(parallel)
+library(parallelMap)
+parallelStartSocket(cpus = detectCores())
+
+#parameter tuning
+mytune <- tuneParams(learner = lrn
+               ,task = traintask
+               ,resampling = rdesc
+               ,measures = acc
+               ,par.set = params
+               ,control = ctrl
+               ,show.info = T)
+
+mytune$y #0.8199257
+
+#set hyperparameters
+lrn_tune <- setHyperPars(lrn,par.vals = mytune$x)
+
+#train model
+xgmodel <- mlr::train(learner = lrn_tune,task = traintask)
+
+#predict model
+xgpred <- predict(xgmodel,testtask)
+
+confusionMatrix(xgpred$data$response,xgpred$data$truth)
+#Accuracy : 0.8747
+
+#stop parallelization
+parallelStop()
+
+xgbt <- roc(predictor = as.numeric(xgpred$data$response), response = as.numeric(xgpred$data$truth))
+
+auc(xgbt)
+
+```
+
+
+
+
+
+
+```{r}
+#Gusto Ridge
+library(glmnet)
+library(glmnetUtils)
+m_ridge <- glmnet(Goal ~., 
+                        data = train, 
+                        family = "binomial", 
+                        alpha = 0)
+
+plot(m_ridge, xvar = "lambda")
+
+
+m_ridge_cv <- cv.glmnet(Goal ~., 
+                    data= train, 
+                    family = "binomial", 
+                    alpha = 0, 
+                    nfolds = 5)
+
+plot(m_ridge_cv)
+
+m_ridge_cv$lambda.min
+
+m_ridge_cv$lambda.1se
+
+min_lambda <- min(m_ridge_cv$lambda.min, m_ridge_cv$lambda.1se)
+max_lambda <- max(m_ridge_cv$lambda.min, m_ridge_cv$lambda.1se)
+lambda_grid <- seq(min_lambda, max_lambda, by = 0.0001)
+alpha_grid <- c(0)
+objGrid <- expand.grid(alpha = alpha_grid,
+lambda = lambda_grid)
+
+fitControl <- trainControl(method = "cv", number= 5)
+
+reg.model <-  train(Goal ~ . ,
+              data = train,
+              method = "glmnet",
+              tuneGrid = objGrid, 
+              trControl = fitControl)
+
+reg.model
+
+preds <- predict(object = reg.model, test, type = "prob")
+
+test$predicted_default <- preds$`1`
+
+reg_perf <- roc(response = test$Goal, 
+predictor = test$predicted_default)
+
+pROC::auc(reg_perf)
+pROC::ci.auc(reg_perf)
+
+varImp(reg.model) ->regvip
+ggplot(data=VIMP,aes(x = VIMP$X, y = VIMP$Overall)) + geom_bar(stat = "identity")
+
+write.csv(regvip$importance, file = 'RocImp2.csv')
+
+VIMP <- read.csv('RocImp2.csv')
+
+#plot(VIMP)
+```
+
+
+

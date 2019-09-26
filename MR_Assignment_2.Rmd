@@ -1,0 +1,69 @@
+---
+title: "Week5"
+author: "Shailesh Dudala"
+date: "2/11/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(readr)
+d.in <- read_csv("R Projects/sample.csv")
+d.in <- d.in %>% mutate(female = as.factor(female))
+d.in <- d.in %>% mutate(hon = as.factor(hon))
+print(summary(d.in))
+
+m.none <- glm(hon ~ 1, family = "binomial", data = d.in)
+summary(m.none)
+```
+
+```{r}
+x <- xtabs(~ female + hon, d.in)
+x
+m.female <-glm(hon~female, family = "binomial", d.in)
+summary(m.female)
+exp(coef(m.female))
+#with(d.in,table(outcome, exposure))
+```
+
+```{r}
+m.math <-glm(hon~math, family = "binomial", d.in)
+exp
+```
+
+```{r}
+m.full <- glm(hon ~ female +math, family = "binomial", d.in)
+summary(m.full)
+exp(coef(m.full))
+```
+
+## Interaction between femake and Male
+
+```{r}
+m.full.int <- glm(hon~ math + female + female*math, family = "binomial", d.in)
+summary(m.full.int)
+confint(m.full.int)
+```
+
+```{r}
+#Predict balance
+library(readr)
+d.train <- read_csv("~/Downloads/training_credit_data.csv")
+d.test <- read_csv("~/Downloads/test_credit_data.csv")
+
+m.lm <- lm(Balance ~., data = d.train)
+d.test$PredictedBalance <- predict(m.lm, newdata = d.test)
+
+#Corr MF
+cor(d.test$Balance, d.test$PredictedBalance)
+#RMSE Test Error
+sqrt(sum((d.test$Balance-d.test$PredictedBalance)^2))
+
+#RMSE Train Error
+sqrt(sum((m.lm$fitted.values-d.train$Balance)^2))
+```
+

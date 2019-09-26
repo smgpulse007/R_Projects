@@ -1,0 +1,29 @@
+---
+title: "Week4"
+author: "Shailesh Dudala"
+date: "2/4/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## WEEK 4 IDA
+
+```{r}
+library(MASS)
+
+d.in <- data.frame(Boston)
+#View(d.in)
+
+m.housing <- lm(medv ~ lstat, d.in)
+coef(m.housing)
+confint(m.housing)
+res <- resid(m.housing)
+ggplot(m.housing, aes(y = m.housing$model$medv, x = m.housing$model$lstat)) + geom_point() + geom_abline()
+
+#Boston <- Boston %>% mutate(chas = as.factor(chas))
+#r2.lm <- lm(medv ~ age + lstat + chas + rm, data = Boston)
+```
+

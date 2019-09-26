@@ -1,0 +1,318 @@
+---
+title: "ML_A4"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+
+#SPLICE DATA - EI
+
+#clear 
+rm(list=ls())
+#load libraries
+library(plyr)
+library(dplyr)
+library(lubridate)
+library(tidyverse)
+library(readr)
+library(lattice)
+library(ggplot2)
+library(pROC)
+library(caret)
+
+setwd("~/Downloads/")
+d.splice_train <- read_csv("splicejn_train_data.csv")
+d.splice_test <- read_csv("splicejn_test_data.csv")
+
+preProcValues_splice <- preProcess(d.splice_train, 
+                                  method = c("center", "scale"))
+
+d.splice_train <- predict(preProcValues_splice, d.splice_train)
+d.splice_test <- predict(preProcValues_splice, d.splice_test)
+
+#error that factors V35, V37, V43 have new levels not in training set: 
+#1. setcharacters as factors and find factors in training set
+
+d.splice_test <- d.splice_test %>% 
+  mutate_if(is.character, as.factor)
+d.splice_train <- d.splice_train %>% 
+  mutate_if(is.character, as.factor)
+
+#str(d.splice_train)
+
+#2. verify A,T,C,G,D,N as only factors in test set for those that exist in train set
+
+d.splice_test <- d.splice_test %>%
+  filter(V35 == "A" | V35 == "T" | V35 == "C" | V35 == "G" | V35 == "D" | V35 == "N") %>%
+  filter(V37 == "A" | V37 == "T" | V37 == "C" | V37 == "G" | V37 == "D" | V37 == "N") %>%
+  filter(V43 == "A" | V43 == "T" | V43 == "C" | V43 == "G" | V43 == "D" | V43 == "N")
+
+
+
+
+#Splice class columns
+
+d.splice_train <- d.splice_train %>%
+  mutate(EI_grp = ifelse(class == 'EI', 'Yes', 'No')) %>%
+  mutate(IE_grp = ifelse(class == 'IE', 'Yes', 'No')) %>%
+  mutate(N_grp = ifelse(class == 'N', 'Yes', 'No'))
+  
+
+d.splice_test <- d.splice_test %>%
+  mutate(EI_grp = ifelse(class == 'EI', 'Yes', 'No')) %>%
+  mutate(IE_grp = ifelse(class == 'IE', 'Yes', 'No')) %>%
+  mutate(N_grp = ifelse(class == 'N', 'Yes', 'No'))
+
+
+#EI vs non-EI log regression
+
+d.splice_train <- d.splice_train %>%
+  select(-c(IE_grp, N_grp, class))
+d.splice_test <- d.splice_test %>%
+  select(-c(IE_grp, N_grp, class))
+
+levels(d.splice_train$EI_grp) <- c("Yes", "No")
+levels(d.splice_test$EI_grp) <- c("Yes", "No")
+
+
+set.seed(456)
+
+splice_objGrid_n <- expand.grid(size = seq(2, 30, by = 1), 
+                               decay = 1e-04)
+
+fitControl <- trainControl(method = "cv", number = 5)
+
+#EI model
+splice_EI_ann.model <- train(EI_grp ~ ., 
+                         data = d.splice_train, 
+                         method = "nnet", 
+                         trControl = fitControl, 
+                         tuneGrid = splice_objGrid_n, 
+                         trace = FALSE)
+
+
+splice_EI_preds <- predict(object = splice_EI_ann.model, 
+                       d.splice_test, 
+                       type = "prob")
+
+d.splice_test$predicted_EIgrp_nnet <- splice_EI_preds$Yes
+
+splice_nnet_perf <- roc(response = d.splice_test$EI_grp, 
+                       predictor = d.splice_test$predicted_EIgrp_nnet)
+
+print(pROC::auc(splice_nnet_perf))
+
+print(pROC::ci.auc(splice_nnet_perf))
+
+
+
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+
+#SPLICE DATA - IE
+
+#clear 
+rm(list=ls())
+#load libraries
+library(plyr)
+library(dplyr)
+library(lubridate)
+library(tidyverse)
+library(readr)
+library(lattice)
+library(ggplot2)
+library(pROC)
+library(caret)
+
+setwd("~/Downloads/")
+d.splice_train <- read_csv("splicejn_train_data.csv")
+d.splice_test <- read_csv("splicejn_test_data.csv")
+
+preProcValues_splice <- preProcess(d.splice_train, 
+                                  method = c("center", "scale"))
+
+d.splice_train <- predict(preProcValues_splice, d.splice_train)
+d.splice_test <- predict(preProcValues_splice, d.splice_test)
+
+
+#error that factors V35, V37, V43 have new levels not in training set: 
+#1. setcharacters as factors and find factors in training set
+
+d.splice_test <- d.splice_test %>% 
+  mutate_if(is.character, as.factor)
+d.splice_train <- d.splice_train %>% 
+  mutate_if(is.character, as.factor)
+
+#str(d.splice_train)
+
+#2. verify A,T,C,G,D,N as only factors in test set for those that exist in train set
+
+d.splice_test <- d.splice_test %>%
+  filter(V35 == "A" | V35 == "T" | V35 == "C" | V35 == "G" | V35 == "D" | V35 == "N") %>%
+  filter(V37 == "A" | V37 == "T" | V37 == "C" | V37 == "G" | V37 == "D" | V37 == "N") %>%
+  filter(V43 == "A" | V43 == "T" | V43 == "C" | V43 == "G" | V43 == "D" | V43 == "N")
+
+
+
+#SPLICE IE vs non-I
+
+d.splice_train <- d.splice_train %>%
+  mutate(EI_grp = ifelse(class == 'EI', 'Yes', 'No')) %>%
+  mutate(IE_grp = ifelse(class == 'IE', 'Yes', 'No')) %>%
+  mutate(N_grp = ifelse(class == 'N', 'Yes', 'No'))
+  
+
+d.splice_test <- d.splice_test %>%
+  mutate(EI_grp = ifelse(class == 'EI', 'Yes', 'No')) %>%
+  mutate(IE_grp = ifelse(class == 'IE', 'Yes', 'No')) %>%
+  mutate(N_grp = ifelse(class == 'N', 'Yes', 'No'))
+
+
+d.splice_train <- d.splice_train %>%
+  select(-c(EI_grp, N_grp, class))
+d.splice_test <- d.splice_test %>%
+  select(-c(EI_grp, N_grp, class))
+
+levels(d.splice_train$IE_grp) <- c("Yes", "No")
+levels(d.splice_test$IE_grp) <- c("Yes", "No")
+
+
+
+set.seed(456)
+
+splice_objGrid_n <- expand.grid(size = seq(2, 30, by = 1), 
+                               decay = 1e-04)
+
+fitControl <- trainControl(method = "cv", number = 5)
+
+#IE model
+splice_IE_ann.model <- train(IE_grp ~ ., 
+                         data = d.splice_train, 
+                         method = "nnet", 
+                         trControl = fitControl, 
+                         tuneGrid = splice_objGrid_n, 
+                         trace = FALSE)
+
+
+splice_IE_preds <- predict(object = splice_IE_ann.model, 
+                       d.splice_test, 
+                       type = "prob")
+
+d.splice_test$predicted_IEgrp_nnet <- splice_IE_preds$Yes
+
+splice_nnet_perf <- roc(response = d.splice_test$IE_grp, 
+                       predictor = d.splice_test$predicted_IEgrp_nnet)
+
+print(pROC::auc(splice_nnet_perf))
+
+print(pROC::ci.auc(splice_nnet_perf))
+
+
+
+```
+
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+
+#SPLICE DATA - N
+
+#clear 
+rm(list=ls())
+#load libraries
+library(plyr)
+library(dplyr)
+library(lubridate)
+library(tidyverse)
+library(readr)
+library(lattice)
+library(ggplot2)
+library(pROC)
+library(caret)
+
+setwd("~/Downloads/")
+d.splice_train <- read_csv("splicejn_train_data.csv")
+d.splice_test <- read_csv("splicejn_test_data.csv")
+
+preProcValues_splice <- preProcess(d.splice_train, 
+                                  method = c("center", "scale"))
+
+d.splice_train <- predict(preProcValues_splice, d.splice_train)
+d.splice_test <- predict(preProcValues_splice, d.splice_test)
+
+#error that factors V35, V37, V43 have new levels not in training set: 
+#1. setcharacters as factors and find factors in training set
+
+d.splice_test <- d.splice_test %>% 
+  mutate_if(is.character, as.factor)
+d.splice_train <- d.splice_train %>% 
+  mutate_if(is.character, as.factor)
+
+#str(d.splice_train)
+
+#2. verify A,T,C,G,D,N as only factors in test set for those that exist in train set
+
+d.splice_test <- d.splice_test %>%
+  filter(V35 == "A" | V35 == "T" | V35 == "C" | V35 == "G" | V35 == "D" | V35 == "N") %>%
+  filter(V37 == "A" | V37 == "T" | V37 == "C" | V37 == "G" | V37 == "D" | V37 == "N") %>%
+  filter(V43 == "A" | V43 == "T" | V43 == "C" | V43 == "G" | V43 == "D" | V43 == "N")
+
+
+#SPLICE N vs non-N 
+
+d.splice_train <- d.splice_train %>%
+  mutate(EI_grp = ifelse(class == 'EI', 'Yes', 'No')) %>%
+  mutate(IE_grp = ifelse(class == 'IE', 'Yes', 'No')) %>%
+  mutate(N_grp = ifelse(class == 'N', 'Yes', 'No'))
+  
+
+d.splice_test <- d.splice_test %>%
+  mutate(EI_grp = ifelse(class == 'EI', 'Yes', 'No')) %>%
+  mutate(IE_grp = ifelse(class == 'IE', 'Yes', 'No')) %>%
+  mutate(N_grp = ifelse(class == 'N', 'Yes', 'No'))
+
+
+d.splice_train <- d.splice_train %>%
+  select(-c(EI_grp, IE_grp, class))
+d.splice_test <- d.splice_test %>%
+  select(-c(EI_grp, IE_grp, class))
+
+levels(d.splice_train$N_grp) <- c("Yes", "No")
+levels(d.splice_test$N_grp) <- c("Yes", "No")
+
+
+set.seed(456)
+
+splice_objGrid_n <- expand.grid(size = seq(2, 30, by = 1), 
+                               decay = 1e-04)
+
+fitControl <- trainControl(method = "cv", number = 5)
+
+#EI model
+splice_n_ann.model <- train(N_grp ~ ., 
+                         data = d.splice_train, 
+                         method = "nnet", 
+                         trControl = fitControl, 
+                         tuneGrid = splice_objGrid_n, 
+                         trace = FALSE)
+
+
+splice_n_preds <- predict(object = splice_n_ann.model, 
+                       d.splice_test, 
+                       type = "prob")
+
+d.splice_test$predicted_ngrp_nnet <- splice_n_preds$Yes
+
+splice_nnet_perf <- roc(response = d.splice_test$N_grp, 
+                       predictor = d.splice_test$predicted_ngrp_nnet)
+
+print(pROC::auc(splice_nnet_perf))
+
+print(pROC::ci.auc(splice_nnet_perf))
+
+
+```

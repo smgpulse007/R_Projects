@@ -1,0 +1,196 @@
+---
+title: "Assignment V"
+author: ""
+date: "March 5, 2019"
+output: html_document
+---
+
+### Due Date: Monday March 11, 2019 at 5:59 pm.
+
+## Introduction
+We are going to use a simulated two-class data set with 200 observations for training and 100 observations for testing, which includes two features, and in which there is a visible but non-linear separation between the two classes. Use the code below for creating such a dataset.
+
+```{r, echo=TRUE, message=FALSE}
+#rm(list = ls())
+library(plyr)
+library(dplyr)
+library(pROC)
+library(caret)
+library(ggplot2)
+library(ROCR)
+library(tidyverse)
+
+
+# set a seed
+set.seed(1)
+
+# ---- Create a training set ---- #
+# create a matrix with 200 rows and two colums with values sampled from a normal distribution.
+x <- matrix(rnorm(200*2), ncol = 2)
+# Introduce some non-linearity where we move points around
+x[1:100,] <- x[1:100,] + 2
+x[101:150,] <- x[101:150,] -2
+# assign class labels
+y <- c(rep(1, 150), rep(0, 50))
+# this forms a training set
+d.train <- data.frame(x = x, y = as.factor(y))
+names(d.train) <- c("X1", "X2", "Y")
+
+
+# ---- Create a test set ---- #
+# create a matrix with 100 rows and two colums with values sampled from a normal distribution.
+x <- matrix(rnorm(100*2), ncol = 2)
+# Introduce some non-linearity where we move points around
+x[1:25,] <- x[1:25,] + 2 # moves points to the top-right of a 2D space
+x[26:75,] <- x[26:75,] -2 # moves points to the bottom-left of a 2D space
+# assign class labels
+y <- c(rep(1, 75), rep(0, 25)) 
+# this forms a testing set
+d.test <- data.frame(x = x, y = as.factor(y))
+names(d.test) <- c("X1", "X2", "Y")
+```
+
+
+
+
+## Question 1
+Create a scatter-plot of all data points in the training set color-labeled by their class type. You will notice that one class is in the center of all points of the other class. In other words, the separation between the classes is a circle around the points with Y as -1. Repeat the same for the testing set. 
+
+```{r}
+# Insert your code below
+
+
+p <- ggplot(d.train, aes(y = X2, x = X1, color = Y)) +  geom_point() 
+p + ggtitle("Training Set")
+
+
+
+q <- ggplot(d.test, aes(y = X2, x = X1, color = Y)) +  geom_point() 
+q + ggtitle("Test Set")
+
+
+
+```
+
+
+
+## Question 2
+Buid a neural network with a variable hidden layer network size from 2 to 50. Feel free to explore different decay rates using "expand.grid" as shown in class. Perform testing on d.test and report the final AUC with 95% CI. 
+
+```{r}
+# Insert your code below
+#Converting the response variables to class labels as recognized by caret
+d.train$Y <-ifelse(d.train$Y==1, "Yes", "No")
+d.test$Y <-ifelse(d.test$Y==1, "Yes", "No")
+
+
+fit_control <-trainControl(method = "cv",number = 3,classProbs = TRUE,summaryFunction = twoClassSummary)
+nnet_params <-expand.grid(size =seq(from = 2, to = 50, by = 1), decay = 5e-4)
+#Look at the parameters nnnet parameters
+head(nnet_params)
+
+m.ann <-train(Y ~., data = d.train, method = "nnet", metric = "ROC",trControl = fit_control, tuneGrid = nnet_params, trace = FALSE)
+#Looking at ROC values for each number of hidden layers chosen
+print((m.ann))
+#Print the final model
+print(summary(m.ann$finalModel))
+
+
+test_predictions <-predict(m.ann, newdata = d.test, type = "prob")
+#Look at the head of predictions made
+head(test_predictions)
+
+d.test$predict_Y <- test_predictions$Yes
+
+pred_roc <-roc(response=d.test$Y, predictor = d.test$predict_Y, direction = "<")
+#paste("AUC :",auc(pred_roc))
+ci_auc <- ci.auc(pred_roc)
+cat("95% CI: ", ci_auc, "\n")
+
+#As the final model output says, its a 2-2-1 model with 5 weights which means that there are 2 hidden layers in the final model as that has the highest ROC as shown by printing the m.ann.
+#Top three hideen layer sizes with ROCs
+print(m.ann$resample)
+
+```
+
+
+
+## Question 3
+
+1. Build a logistic regression prediction model using d.train. Test on d.test, and report your test AUC.
+
+```{r, echo=FALSE}
+# set a seed
+set.seed(1)
+
+# ---- Create a training set ---- #
+# create a matrix with 200 rows and two colums with values sampled from a normal distribution.
+x <- matrix(rnorm(200*2), ncol = 2)
+# Introduce some non-linearity where we move points around
+x[1:100,] <- x[1:100,] + 2
+x[101:150,] <- x[101:150,] -2
+# assign class labels
+y <- c(rep(1, 150), rep(0, 50))
+# this forms a training set
+d.train <- data.frame(x = x, y = as.factor(y))
+names(d.train) <- c("X1", "X2", "Y")
+
+
+# ---- Create a test set ---- #
+# create a matrix with 100 rows and two colums with values sampled from a normal distribution.
+x <- matrix(rnorm(100*2), ncol = 2)
+# Introduce some non-linearity where we move points around
+x[1:25,] <- x[1:25,] + 2 # moves points to the top-right of a 2D space
+x[26:75,] <- x[26:75,] -2 # moves points to the bottom-left of a 2D space
+# assign class labels
+y <- c(rep(1, 75), rep(0, 25)) 
+# this forms a testing set
+d.test <- data.frame(x = x, y = as.factor(y))
+names(d.test) <- c("X1", "X2", "Y")
+```
+
+
+```{r}
+# Insert your code below
+
+glm.out <- glm(d.train, formula = Y ~., family = 'binomial')
+#summary(glm.out)
+
+
+d.test$pred_Y <- predict.glm(glm.out, newdata = d.test, type = "response")
+pred <- roc(response = d.test$Y, predictor = d.test$pred_Y, direction = "<")
+#Determine the best cutoff value by using the pROC package
+x <- coords(pred, "best", ret = "threshold")
+cat("Best threshold is :", x, "\n")
+
+auc_logit <- auc(actual = d.test$Y, predicted  = d.test$pred_Y)
+auc_logit
+
+#plot(roc(response = d.test$Y, predictor = d.test$pred_Y, print.auc = TRUE), col="yellow", lwd=3, main="The turtle finds its way")
+pred1 <- prediction(d.test$pred_Y, d.test$Y)
+perf1 <- performance(pred1,"tpr","fpr")
+plot(perf1)
+#Storing all values of TPR and FPR in a data frame to see cut-off points that maximize TPR and minimize FPR
+cutoffs <- data.frame(cut=perf1@alpha.values[[1]], fpr=perf1@x.values[[1]], 
+                     tpr=perf1@y.values[[1]])
+
+
+```
+
+```{r}
+#It would be safe to use the threshold cut-off as 0.79 to maximize AUC from our logistic regression model as determined by the pROC package above using coords function
+
+d.test$pred_Y <- ifelse(d.test$pred_Y >= 0.79, 1, 0)
+
+pred_new <- roc(response = d.test$Y, predictor = d.test$pred_Y, direction = "<")
+auc_new <- auc(pred_new)
+auc_new
+ci_auc_perf <- ci.auc(pred_new)
+ci_auc_perf
+```
+
+
+
+2. Which of the two models leads to better performance? Explain in no more than 2 sentences why.        
+
+Ans. NNet Model has an AUC  of ~0.95 and the logistic regression model has an AUC of 0.6.(With a threshold of 0.79 as determined by the ROC curve) This implies that the NNet Model has a better performance over the logistic regression model.

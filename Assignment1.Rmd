@@ -1,0 +1,118 @@
+---
+title: "Assignment I"
+author: ""
+date: "January 15, 2019"
+output: html_document
+---
+
+
+#### Instructions
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+x_int <- c(1, 2, 3)
+x_int
+```
+
+
+> Please submit your answers by 5:59 pm on 01/21/2019
+
+#### Section 1: Probability : Total points 50
+
+
+Q1. Which of the following numbers cannot be probability? Explain why.     
+
+a) -0.0001
+b) 0.05
+c) 3.415
+d) 20%
+e) 1
+
+Ans 1.  
+
+Q2. A card is drawn randomly from a deck of ordinary playing cards. The game rules are that you win if the card is a spade or an ace. What is the probability that you will win the game?
+
+Ans 2. 
+
+Q3. An urban hospital has a 20% mortality rate on average for admitted patients. If on a particular day, 17 patients got admitted, what are:
+
+a) the chances that exactly 7 will survive?
+
+b) the chances that at least 15 patients will survive?    
+
+Ans 3.
+
+Q4. Let F and G be two events such that P(F) is 0.4, P(G) is 0.8. F and G are independent events. Fill in the remaining elements of the table.
+
+Table    | $G$ | $\bar{G}$ | Marginal
+---------|-----|-----------|----------
+$F$      |     |           | 
+$\bar{F}$|     |           |
+Marginal |     |           |    1
+
+
+Q5. Let F and G be two events such that P(F) is 0.2, P(G) is 0.7. Now, the conditional probability P(G|F) is given as 0.4. Fill in the remaining elements of the table.
+
+Table    | $G$ | $\bar{G}$ | Marginal
+---------|-----|-----------|----------
+$F$      |     |           | 
+$\bar{F}$|     |           |
+Marginal |     |           |    1
+
+
+Q6. A survey was conducted among 100 patients about smoking status. The following is the sample size split by smoking status (Yes or No) and gender (Male or Female). 
+
+
+Table    | Smoking (Yes) | Smoking(No) | Total
+---------|---------------|-------------|----------
+Male     |               |             | 55
+Female   |               |             | 45
+Total    |       32      |        68   | 100 
+
+
+The probability that a randomly selected patient is a male who smokes is 0.19.  
+
+(a) Fill in all the elements of the table
+
+
+(b) What is the probability of a randomly selected patient being a female?    
+ 
+
+(c) What is the probability of a randomly selected patient being a smoker?     
+
+
+(d)  What is the probability of a randomly selected smoker being a female?    
+
+
+#### Section 2: Data Analysis using R: Total points 25
+
+
+Q1 : Using the dataset provided ("sample_patient_dataset.csv"), the task to build a 2x2 table for the studying the association between age at admission >70 and cardiac arrests. You can either use the sample table given below or build your own. Rememer to output both count and % in the table. Be sure to round the % to the nearest integer (e.g, 0.674 will be 67% and 0.675 will be 68%, see notes in Lecture2 on summary statistics as example). Fill in the code in the shaded areas.
+
+
+Table         | Cardiac Arrests (Yes) | Cardiac Arrests (No) | Total
+--------------|-----------------------|----------------------|----------
+Age > 70 (%)  |                       |                      | 
+Age <= 70 (%) |                       |                      | 
+Total         |                       |                      | 24,107
+
+
+```{r}
+### Insert code here
+
+
+```
+
+
+
+Q2: Create your own de-identified version of "patient_dataset.csv". Upload your de-identified dataset onto Canvas and write the de-identification code below. You will need to refer to the document "Deidentification.pdf" (on Canvas, look under files -> lectures -> lecture_2).
+
+### Insert code here
+```{r}
+### Insert code here
+
+
+```

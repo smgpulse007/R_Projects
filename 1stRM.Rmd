@@ -1,0 +1,125 @@
+---
+title: "1stRM"
+output: html_document
+---
+rm(list = ls())
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+x<- 5
+y<- 6
+z<- 11
+a <- sum(x,y,z)
+cat("The value of z is", z, "\n")
+cat("The sum is fucking", a, "\n")
+```
+
+```{r}
+x <- 7
+cat("The value of z is now", z, "\n")
+```
+
+```{bash}
+ls 
+rm YoloR
+
+```
+```{r}
+y <- c(1,2,3,5)
+x <-list(y,2,3, "male", "female")
+```
+
+```{r}
+d.in <- read.csv("patient_dataset.csv", header = TRUE)
+head(d.in)
+
+d.cohort <- d.in %>%
+  mutate(d.in, dob = mdy(dob), hosp_admission = mdy(hosp_admission)) %>% 
+   mutate(d.in, age_at_admit = interval(dob, hosp_admission)/ dyears(1)) %>%
+            select(d.in, c("age_at_admit", "had_cardiac_arrests"))
+
+
+
+```
+```{r}
+# Program to create a test R script
+
+rm(list=ls())
+library(plyr)
+library(dplyr)
+library(lubridate)
+
+df.in <-read.csv("~/Downloads/patient_dataset.csv", header = TRUE)
+
+# # convert dob into date-time
+# df.in <- mutate(df.in, new_dob = mdy(dob), hosp_admission = mdy(hosp_admission))
+# 
+# # calculate age
+# df.in <- mutate(df.in, age_at_admit = interval(dob, hosp_admission) / dyears(1))
+# 
+# # choose male
+# df.males <- filter(df.in, gender =="M")
+# 
+# # choose outcone and exposure
+# d.cohort <- select(df.in, c("age_at_admit", "had_cardiac_arrests"))
+
+ df.cohort <- df.in %>%
+   mutate(dob = mdy(dob), hosp_admission = mdy(hosp_admission)) %>%
+   mutate(dob = correct_century(dob))
+
+
+%>%
+  mutate(age_at_admit = interval(dob, hosp_admission) / dyears(1)) %>%
+  select(c("age_at_admit", "had_cardiac_arrests"))
+
+mean_age_ca <- df.cohot %>%
+  filter(had_cardiac_arrests == 1) %>%
+  select("age_at_admit") %>%
+  unlist() %>%
+  mean()
+
+sd_age_ca <- df.cohot %>%
+  filter(had_cardiac_arrests == 1) %>%
+  select("age_at_admit") %>%
+  unlist() %>%
+  sd()
+
+mean_age_no_ca <- df.cohot %>%
+  filter(had_cardiac_arrests == 0) %>%
+  select("age_at_admit") %>%
+  unlist() %>%
+  mean()
+
+sd_age_no_ca <- df.cohot %>%
+  filter(had_cardiac_arrests == 0) %>%
+  select("age_at_admit") %>%
+  unlist() %>%
+  sd()
+
+d.mean <-d.cohort %>%
+  group_by(had_cardiac_arrest) %>%
+  summarise(mean_age = mean(age_at_admit), sd_age = sd(age_at_admit))
+
+#MERGE
+# Inner Join
+#d.new <- merge(d.1, d.2, by = c("var1", "var2"))
+# Left Join
+#d.new <- merge(d.1, d.2, by = c("var1", "var2"), all.x = TRUE)
+#Right Join
+#d.new <- merge(d.1,d.2, by = c("var1"), all.y = TRUE)
+
+#Split process-combine
+
+#Functions
+d.out <- function_name(d.in, parameter)
+
+#ggplot2
+
+g <- ggplot2::(d.in, (x=count)) + geom_histogram
+plot(g)
+```
+```{r}
+
+```
+

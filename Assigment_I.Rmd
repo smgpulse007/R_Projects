@@ -1,0 +1,233 @@
+---
+title: "Assignment_I"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+#### Section 1: Probability : Total points 50
+
+
+Q1. Which of the following numbers cannot be probability? Explain why.     
+
+a) -0.0001
+b) 0.05
+c) 3.415
+d) 20%
+e) 1
+
+(Ans) 1.  (a) and (c) cannot be probability of any event because the probability of an event is always non-negative and lies between 0 and 1.
+
+Q2. A card is drawn randomly from a deck of ordinary playing cards. The game rules are that you win if the card is a spade or an ace. What is the probability that you will win the game?
+
+(Ans) 2. 3/52 + 13 /52 = 16/52 or 0.308 or 30.8% chance of wininng the game.
+
+Q3. An urban hospital has a 20% mortality rate on average for admitted patients. If on a particular day, 17 patients got admitted, what are:
+
+a) the chances that exactly 7 will survive?
+```{r}
+#A binomial distribution that selects exactly 7 patients out of 17 to survive with a rate of 0.8. (or mortality rate = 0.2)
+p_7_surive <-  dbinom(x = 7, size = 17, prob = 0.8)
+print(p_7_surive)
+```
+
+b) the chances that at least 15 patients will survive?    
+```{r}
+# P(at least 15 survive) = P(Exactly 15 survive) + P(Exactly 16 survive) + P(Exactly 17 survive)
+p15 <- dbinom(x = 15, size = 17, prob = 0.8)
+p16 <- dbinom(x = 16, size = 17, prob = 0.8)
+p17 <- dbinom(x = 17, size = 17, prob = 0.8)
+pAtleast15 <- p15 + p16 + p17
+print(pAtleast15)
+```
+
+
+Q4. Let F and G be two events such that P(F) is 0.4, P(G) is 0.8. F and G are independent events. Fill in the remaining elements of the table.
+
+Table    | $G$ | $\bar{G}$ | Marginal
+---------|-----|-----------|----------
+$F$      |0.32 |  0.08     | 0.40 
+$\bar{F}$|0.48 |  0.12     | 0.60
+Marginal |0.80 |  0.20     |    1
+
+
+Q5. Let F and G be two events such that P(F) is 0.2, P(G) is 0.7. Now, the conditional probability P(G|F) is given as 0.4. Fill in the remaining elements of the table.
+
+Table    | $G$ | $\bar{G}$ | Marginal
+---------|-----|-----------|----------
+$F$      |0.08 |    0.12   |   0.2
+$\bar{F}$|0.62 |    0.18   |   0.8
+Marginal | 0.7 |    0.3    |    1
+
+
+Q6. A survey was conducted among 100 patients about smoking status. The following is the sample size split by smoking status (Yes or No) and gender (Male or Female). 
+
+
+Table    | Smoking (Yes) | Smoking(No) | Total
+---------|---------------|-------------|----------
+Male     |       19      |     36      | 55
+Female   |       13      |     32      | 45
+Total    |       32      |     68      | 100 
+
+
+The probability that a randomly selected patient is a male who smokes is 0.19.  
+
+(a) Fill in all the elements of the table
+(Ans) The table above is filled as specified.
+
+(b) What is the probability of a randomly selected patient being a female?    
+(Ans) P(female)= 45/100 = .45
+
+(c) What is the probability of a randomly selected patient being a smoker?     
+(Ans) P(smoker) = 32/100 = .32
+
+(d)  What is the probability of a randomly selected smoker being a female?    
+(Ans) P(female|smoker) = 13/32 = .40
+
+#### Section 2: Data Analysis using R: Total points 25
+
+
+Q1 : Using the dataset provided ("sample_patient_dataset.csv"), the task to build a 2x2 table for the studying the association between age at admission >70 and cardiac arrests. You can either use the sample table given below or build your own. Rememer to output both count and % in the table. Be sure to round the % to the nearest integer (e.g, 0.674 will be 67% and 0.675 will be 68%, see notes in Lecture2 on summary statistics as example). Fill in the code in the shaded areas.
+
+
+Table         | Cardiac Arrests (Yes) | Cardiac Arrests (No) | Total
+--------------|-----------------------|----------------------|----------
+Age > 70 (%)  |       453   (2)       |     4728 (20)     | 5181 (21)
+Age <= 70 (%) |       1672  (7)       |     17254(72)     | 18926 (79)
+Total         |       2125   (9)     |     21982 (91)    | 24,107
+
+
+```{r}
+
+#library(readr)
+library(dplyr)
+library(lubridate)
+library(formattable)
+
+pdata <-  read.csv("/Users/shaileshdudala/R Projects/sample_patient_dataset.csv")
+pd    <-  pdata %>% mutate(dob = mdy(dob), hosp_admission = mdy(hosp_admission)) %>% 
+          mutate(age_at_admit = interval(dob, hosp_admission)/ dyears(1)) %>%
+          select(c("age_at_admit", "had_cardiac_arrests")) 
+
+card_70plus    <-  pd %>% filter(age_at_admit > 70 & had_cardiac_arrests == 1) %>% nrow()
+nocard_70plus  <-  pd %>% filter(age_at_admit > 70 & had_cardiac_arrests == 0) %>% nrow()
+card_under70   <-  pd %>% filter(age_at_admit < 70 & had_cardiac_arrests == 1) %>% nrow()
+nocard_under70 <-  pd %>% filter(age_at_admit < 70 & had_cardiac_arrests == 0) %>% nrow()
+totCard        <-  pd %>% filter(had_cardiac_arrests == 1) %>% nrow()
+totNoCard      <-  pd %>% filter(had_cardiac_arrests == 0) %>% nrow()
+tot70Plus      <-  pd %>% filter(age_at_admit > 70) %>% nrow()
+totUnder70     <-  pd %>% filter(age_at_admit < 70) %>% nrow()
+totPat         <- totCard + totNoCard
+# Patients with Cardiac Arrests above 70
+card_70plus    <-  pd %>% filter(age_at_admit > 70 & had_cardiac_arrests == 1) %>% nrow()
+cat("Patients with Cardiac Arrests above 70: ",card_70plus)
+x <- round(percent(card_70plus/totPat), digits = 2)
+print(x)
+#Patients wihout Cardiac Arrests above 70
+nocard_70plus  <-  pd %>% filter(age_at_admit > 70 & had_cardiac_arrests == 0) %>% nrow()
+cat("Patients wihout Cardiac Arrests above 70: ",nocard_70plus)
+y <- round(percent(nocard_70plus/totPat), digits = 2)
+print(y)
+#Patients with Cardiac Arrests under 70
+card_under70   <-  pd %>% filter(age_at_admit < 70 & had_cardiac_arrests == 1) %>% nrow()
+cat("Patients wih Cardiac Arrests under 70: ",card_under70)
+z <- round(percent(card_under70/totPat), digits = 2)
+print(z)
+#Patients without Cardiac Arrests under 70
+nocard_under70 <-  pd %>% filter(age_at_admit < 70 & had_cardiac_arrests == 0) %>% nrow()
+cat("Patients without Cardiac Arrests under 70: ",nocard_under70)
+a <- round(percent(nocard_under70/totPat), digits = 2)
+print(a)
+#Total Patients with Cardiac Arrests
+totCard        <-  pd %>% filter(had_cardiac_arrests == 1) %>% nrow()
+cat("Total Patients with Cardiac Arrests: ",totCard)
+b <- round(percent(totCard/totPat), digits = 2)
+print(b)
+#Patients without Cardiac Arrests
+totNoCard      <-  pd %>% filter(had_cardiac_arrests == 0) %>% nrow()
+cat("Total Patients without Cardiac Arrests: ", totNoCard)
+c <- round(percent(totNoCard/totPat), digits = 2)
+print(c)
+#Total PAtients above age 70
+tot70Plus      <-  pd %>% filter(age_at_admit > 70) %>% nrow()
+cat("Total PAtients above age 70: ", tot70Plus)
+d <- round(percent(tot70Plus/totPat), digits = 2)
+print(d)
+#Total Patients under age 70
+totUnder70     <-  pd %>% filter(age_at_admit < 70) %>% nrow()
+cat("Total Patients under age 70: ", totUnder70)
+e <- round(percent(totUnder70/totPat), digits = 2)
+print(e)
+#Total Number of Patients
+totPat <- tot70Plus + totUnder70
+cat("The total number of Patients is ", totPat)
+
+
+
+
+
+```
+
+
+
+Q2: Create your own de-identified version of "patient_dataset.csv". Upload your de-identified dataset onto Canvas and write the de-identification code below. You will need to refer to the document "Deidentification.pdf" (on Canvas, look under files -> lectures -> lecture_2).
+
+
+```{r}
+#Import dataset
+deid.in <- read.csv("/Users/shaileshdudala/R Projects/patient_dataset.csv")
+# create random Ids
+all.patients <- deid.in %>%
+  select(patient.ids) %>%
+  unique()
+all.patients$random_id <- sample(nrow(all.patients), replace = FALSE)
+
+# merge random ids to data frame
+deid.in <- merge(deid.in, all.patients, by = "patient.ids")
+
+# remove patient ids
+deid.in <- deid.in %>%
+select(-c(patient.ids))
+
+#remove names
+deid.in <- deid.in %>%
+select(-c(patient.names))
+
+# remove other identifiers
+deid.in <- deid.in %>%
+select(-c(street_address, city, zip_code, contact_number))
+
+# First, format date of discharge
+deid.in$hosp_admission_format  <- mdy(deid.in$hosp_admission, tz = "America/Chicago")
+
+# Create new date-time variable for date of discharge
+deid.in$hosp_discharge_format <- mdy(deid.in$hosp_discharge, tz = "America/Chicago")
+
+# Using mutate from plyr and dplyr for data frame operations
+deid.in <- mutate(deid.in,
+              hosp_admission_format = mdy(deid.in$hosp_admission), 
+              hosp_discharge_format = mdy(deid.in$hosp_discharge))
+
+# Calculate diffreence between admission and discharge
+deid.in <- mutate(deid.in,
+               temp_interval2 = interval(hosp_admission_format, hosp_discharge_format))
+# Calculate age
+deid.in <- deid.in %>% mutate(dob_form =mdy(deid.in$dob, tz = "America/Chicago")) %>% mutate(temp_interval =interval(dob_form, hosp_admission_format)) %>% mutate(age_at_admit = temp_interval/ dyears(1))
+
+# Interval to days
+deid.in <-mutate(deid.in,length_of_stay= temp_interval2 /ddays(1))
+
+# remove identifiers and interval
+deid.in <- deid.in %>% select(-c(dob, hosp_admission, hosp_admission_format, hosp_discharge, hosp_discharge_format, temp_interval2, admitting_provider, dob_form, temp_interval))
+
+# write document
+write.csv(deid.in, "/Users/shaileshdudala/R Projects//patient_dataset_deidentified.csv",
+row.names = FALSE, quote = TRUE)
+
+
+```
+

@@ -1,0 +1,117 @@
+---
+title: "Week 6 Class AB"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(cluster)    # clustering algorithms
+library(factoextra)
+library(readr)
+library(stats)
+
+d.sf  <- read_csv("~/AbbVie/Filt_SelFeat.csv")
+row.names(d.sf) <- d.sf$id
+#rownames(d.sf)<- c(65.65, 88.23, 96.77, 41.05, 70.15, 35.11, 69.95, 83.16, 95.14, 91.71, 88.62, 92.99, 99.47, 94.12, 99.15, 96.77, 85.09, 97.41, 86.08, 65.65, 76.69, 47.08, 69.03, 83.80, 90.47, 90.88, 86.54, 71.66, 78.14, 102.18, 75.10, 91.72, 96.60, 85.69, 90.26)
+#Remove ID column
+d.sf <- d.sf %>% select(-c(id)) 
+
+scaled.sf <- scale(d.sf)
+fviz_dist(distScaled_sf, gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+distScaled_sf <- dist(scaled.sf)
+
+ff_hclustC <- hclust(distScaled_sf, method = "complete")
+plot(ff_hclustC)
+
+
+ff_hclustA <- hclust(distScaled_sf, method = "average")
+plot(ff_hclustA)
+```
+
+```{r}
+
+
+set.seed(343)
+# Initialize total within sum of squares error: wss
+wss <- 0
+
+# Look over 1 to 15 possible clusters
+for (i in 1:15) {
+  # Fit the model: km.out
+  km.out <- kmeans(d.sf, centers = i, nstart = 20, iter.max = 50)
+  # Save the within cluster sum of squares
+  wss[i] <- km.out$tot.withinss
+}
+
+# Produce a scree plot
+plot(1:15, wss, type = "b", 
+     xlab = "Number of Clusters", 
+     ylab = "Within groups sum of squares")
+
+# Select number of clusters
+k <- 3
+
+# Build model with k clusters: km.out
+km.out <- kmeans(d.sf, centers = 3, nstart = 20, iter.max = 50)
+
+# View the resulting model
+km.out
+
+#plot(d.sf, col = km.out$cluster, main = "k-means with 3 clusters")
+
+yolo <- fviz_cluster(km.out, d.sf[,-1], labelsize = 0, outlier.color = "red") 
+
+yolo + geom_text(data=d.sf$id, aes(x=x, y=y, label=c(65.65, 88.23, 96.77, 41.05, 70.15, 35.11, 69.95, 83.16, 95.14, 91.71, 88.62, 92.99, 99.47, 94.12, 99.15, 96.77, 85.09, 97.41, 86.08, 65.65, 76.69, 47.08, 69.03, 83.80, 90.47, 90.88, 86.54, 71.66, 78.14, 102.18, 75.10, 91.72, 96.60, 85.69, 90.26), colour=cluster),
+  vjust=-1.5, show.legend = F)
+
+#print(yolo)
+```
+
+```{r}
+km.out <- kmeans(d.sf, centers = 4, nstart = 20, iter.max = 50)
+
+# View the resulting model
+km.out
+
+#plot(d.sf, col = km.out$cluster, main = "k-means with 3 clusters")
+
+yolo <- fviz_cluster(km.out, d.sf[,-1], labelsize = 0, outlier.color = "red") 
+
+yolo + geom_text(data=d.sf$id, aes(x=x, y=y, label=c(65.65, 88.23, 96.77, 41.05, 70.15, 35.11, 69.95, 83.16, 95.14, 91.71, 88.62, 92.99, 99.47, 94.12, 99.15, 96.77, 85.09, 97.41, 86.08, 65.65, 76.69, 47.08, 69.03, 83.80, 90.47, 90.88, 86.54, 71.66, 78.14, 102.18, 75.10, 91.72, 96.60, 85.69, 90.26), colour=cluster),
+  vjust=-1.5, show.legend = F)
+```
+It is too early to conclude any clinical 
+
+
+```{r}
+d.sf %>%
+  mutate(Cluster = km.out$cluster) %>%
+  group_by(Cluster) %>%
+  summarise_all("mean")
+```
+```{r}
+fviz_nbclust(d.sf, kmeans, method = "wss")
+```
+
+```{r}
+res.pca <- prcomp(d.sf[,-1],  scale = TRUE)
+summary(res.pca)
+#print(res.pca)
+```
+```{r}
+fviz_pca_ind(res.pca, label="none", habillage=d.sf$id, addEllipses = T)
+
+```
+
+```{r}
+fviz_pca_var(res.pca)
+```
+
+```{r}
+fviz_pca_biplot(res.pca, invisible = "var")
+```
+
+

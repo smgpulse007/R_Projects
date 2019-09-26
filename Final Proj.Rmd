@@ -1,0 +1,353 @@
+---
+title: "Final Project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls())
+#Attach libraries
+library(ggplot2)
+library(tidyverse)
+library(Metrics)
+library(broom)
+library(caret)
+library(pROC)
+library(ROCR)
+
+
+```
+
+```{r}
+# Read datasets Cleveland_hd.csv into d.in
+d.in <- read.csv("Cleveland_hd.csv", header = TRUE)
+
+set.seed(007)
+trainIndex <- createDataPartition(d.in$class, p = 0.8, times = 1, list = FALSE)
+d.train <- d.in[trainIndex,]
+d.test  <- d.in[-trainIndex,]
+
+# Putting in class labels in the training sets
+d.train %>% mutate(hd = ifelse(class > 0, 1, 0))-> d.train_0
+d.train %>% mutate(hd = ifelse(class > 1, 1, 0))-> d.train_01
+d.train %>% mutate(hd = ifelse(class > 2, 1, 0))-> d.train_012
+d.train %>% mutate(hd = ifelse(class > 3, 1, 0))-> d.train_0123
+
+# Putting in class labels in the test sets
+d.test %>% mutate(hd = ifelse(class > 0, 1, 0)) -> d.test_0
+d.test %>% mutate(hd = ifelse(class > 1, 1, 0)) -> d.test_01
+d.test %>% mutate(hd = ifelse(class > 2, 1, 0)) -> d.test_012
+d.test %>% mutate(hd = ifelse(class > 3, 1, 0)) -> d.test_0123
+
+# Factoring and providing class labels
+d.train_0    %>% mutate(sex = factor(sex, levels = 0:1, labels = c("Female", "Male")))-> d.train_0
+d.train_01   %>% mutate(sex = factor(sex, levels = 0:1, labels = c("Female", "Male")))-> d.train_01
+d.train_012  %>% mutate(sex = factor(sex, levels = 0:1, labels = c("Female", "Male")))-> d.train_012
+d.train_0123 %>% mutate(sex = factor(sex, levels = 0:1, labels = c("Female", "Male")))-> d.train_0123
+
+d.test_0 %>% mutate(sex = factor(sex, levels = 0:1, labels = c("Female", "Male")))-> d.test_0
+d.test_01 %>% mutate(sex = factor(sex, levels = 0:1, labels = c("Female", "Male")))-> d.test_01
+d.test_012 %>% mutate(sex = factor(sex, levels = 0:1, labels = c("Female", "Male")))-> d.test_012
+d.test_0123 %>% mutate(sex = factor(sex, levels = 0:1, labels = c("Female", "Male")))-> d.test_0123
+
+
+
+# Does sex have an effect? Sex is a binary variable in this dataset,
+# so the appropriate test is chi-squared test
+hd_sex0    <- chisq.test(d.train_0$sex,d.train_0$hd)
+hd_sex01   <- chisq.test(d.train_01$sex,d.train_01$hd)
+hd_sex012  <- chisq.test(d.train_012$sex,d.train_012$hd)
+hd_sex0123 <- chisq.test(d.train_0123$sex,d.train_0123$hd)
+
+# Does age have an effect? Age is continuous, so we use a t-test
+hd_age0 <- t.test(d.train_0$age,d.train_0$hd)
+hd_age01 <- t.test(d.train_01$age,d.train_01$hd)
+hd_age012 <- t.test(d.train_012$age,d.train_012$hd)
+hd_age0123 <- t.test(d.train_0123$age,d.train_0123$hd)
+
+# What about thalach? Thalach is continuous, so we use a t-test
+hd_heartrate0 <- t.test(d.train_0$thalach,d.train_0$hd)
+hd_heartrate01 <- t.test(d.train_01$thalach,d.train_01$hd)
+hd_heartrate012 <- t.test(d.train_012$thalach,d.train_012$hd)
+hd_heartrate0123 <- t.test(d.train_0123$thalach,d.train_0123$hd)
+
+# We're Print the results to see if p<0.05.
+print(hd_sex0)  
+print(hd_sex01)  
+print(hd_sex012 )
+print(hd_sex0123)
+
+print(hd_heartrate0)  
+print(hd_heartrate01)  
+print(hd_heartrate012)
+print(hd_heartrate0123)
+
+print(hd_age0)
+print(hd_age01)
+print(hd_age012)
+print(hd_age0123)
+
+#How about cholestrol? chol is continuous, so t-test
+t.test(d.train_0$chol, d.train_0$hd)
+t.test(d.train_01$chol, d.train_01$hd)
+t.test(d.train_012$chol, d.train_012$hd)
+t.test(d.train_0123$chol, d.train_0123$hd)
+
+#How about resting blood pressure which is also continuos, so t-test
+t.test(d.train_0$trestbps, d.train_0$hd)
+t.test(d.train_01$trestbps, d.train_01$hd)
+t.test(d.train_012$trestbps, d.train_012$hd)
+t.test(d.train_0123$trestbps, d.train_0123$hd)
+
+
+
+```
+
+
+```{r}
+library(ggpubr)
+#theme_set(theme_pubr())
+# Make hd labelled
+ d.train_0    %>% mutate(hd_labelled = ifelse(hd == 0, "No Risk", "At Risk")) -> d.train_0
+ d.train_01   %>% mutate(hd_labelled = ifelse(hd == 0 , "No Risk", "At Risk")) -> d.train_01
+ d.train_012  %>% mutate(hd_labelled = ifelse(hd == 0, "No Risk", "At Risk")) -> d.train_012 
+ d.train_0123 %>% mutate(hd_labelled = ifelse(hd == 0, "No Risk", "At Risk")) -> d.train_0123
+
+# age vs hd
+a1 <- ggplot(data = d.train_0, aes(x = hd_labelled,y = age)) + geom_boxplot()    + xlab("") + ylab("Age")
+a2 <- ggplot(data = d.train_01, aes(x = hd_labelled,y = age)) + geom_boxplot()   + xlab("") + ylab("Age")
+a3 <- ggplot(data = d.train_012, aes(x = hd_labelled,y = age)) + geom_boxplot()  + xlab("") + ylab("Age")
+a4 <- ggplot(data = d.train_0123, aes(x = hd_labelled,y = age)) + geom_boxplot() + xlab("") + ylab("Age")
+#Combine the plots into one graph
+figure1 <- ggarrange(a1, a2, a3, a4,
+                    labels = c("M 1", "M 2", "M 3", "M 4"),
+                    ncol = 2, nrow = 2)
+figure1
+
+# sex vs hd
+b1 <- ggplot(data = d.train_0,aes(x= hd_labelled, color = sex)) + geom_bar(position = 'fill') + ylab("Sex %") + xlab("")
+b2 <- ggplot(data = d.train_01,aes(x= hd_labelled, color = sex)) + geom_bar(position = 'fill') + ylab("Sex %") + xlab("")
+b3 <- ggplot(data = d.train_012,aes(x= hd_labelled, color = sex)) + geom_bar(position = 'fill') + ylab("Sex %") + xlab("")
+b4 <- ggplot(data = d.train_0123,aes(x= hd_labelled, color = sex)) + geom_bar(position = 'fill') + ylab("Sex %") + xlab("")
+#Combine the plots into one graph
+figure2 <- ggarrange(b1, b2, b3, b4,
+                    labels = c("M 1", "M 2", "M 3", "M 4"),
+                    ncol = 2, nrow = 2)
+figure2
+
+# max heart rate vs hd
+c1 <- ggplot(data = d.train_0, aes(x = hd_labelled, y = thalach)) +    geom_boxplot() + xlab("") + ylab("Max Heart Rate")
+c2 <- ggplot(data = d.train_01, aes(x = hd_labelled, y = thalach)) +   geom_boxplot() + xlab("") + ylab("Max Heart Rate")
+c3 <- ggplot(data = d.train_012, aes(x = hd_labelled, y = thalach)) +  geom_boxplot() + xlab("") + ylab("Max Heart Rate")
+c4 <- ggplot(data = d.train_0123, aes(x = hd_labelled, y = thalach)) + geom_boxplot() + xlab("") + ylab("Max Heart Rate")
+#Combine the plots into one graph
+figure3 <- ggarrange(c1, c2, c3, c4,
+                    labels = c("M 1", "M 2", "M 3", "M 4"),
+                    ncol = 2, nrow = 2)
+figure3
+```
+
+
+```{r}
+#Create Logit model
+
+model0 <- glm(data = d.train_0, family = 'binomial', hd ~ age + sex + thalach + chol + trestbps)
+model01 <- glm(data = d.train_01, family = 'binomial', hd ~ age + sex + thalach + chol + trestbps)
+model012 <- glm(data = d.train_012, family = 'binomial', hd ~ age + sex + thalach + chol + trestbps)
+model0123 <- glm(data = d.train_0123, family = 'binomial', hd ~ age + sex + thalach + chol + trestbps)
+
+#Quick Look the model summary
+summary(model0)
+summary(model01)
+summary(model012)
+summary(model0123)
+
+#Tidying up the coefficients
+tidy_m0 <- tidy(model0)
+tidy_m01 <- tidy(model01)
+tidy_m012 <- tidy(model012)
+tidy_m0123 <- tidy(model0123)
+
+#Calculate OR and add it to the above table
+tidy_m0$OR <- exp(tidy_m0$estimate)
+tidy_m01$OR <- exp(tidy_m01$estimate)
+tidy_m012$OR <- exp(tidy_m012$estimate)
+tidy_m0123$OR <- exp(tidy_m0123$estimate)
+
+#Calculate 95% CI and save as lower CI and upper CI
+tidy_m0 <- cbind(tidy_m0, exp(confint_tidy(model0)))
+tidy_m01 <- cbind(tidy_m01, exp(confint_tidy(model01)))
+tidy_m012 <- cbind(tidy_m012, exp(confint_tidy(model012)))
+tidy_m0123 <- cbind(tidy_m0123, exp(confint_tidy(model0123)))
+
+#Print the updated table
+print(tidy_m0)
+print(tidy_m01)
+print(tidy_m012)
+print(tidy_m0123)
+```
+
+
+```{r}
+
+#get the predicted probability in our dataset just for model 1
+
+
+d.test_0$pred <- predict.glm(model0, newdata = d.test_0, type = "response")
+
+# Create a prediction object
+
+pred1 <- prediction(d.test_0$pred, d.test_0$hd)
+# Get performance
+perf1 <- performance(pred1,"tpr","fpr")
+plot(perf1, col = 'red')
+
+pred = predict(model0, newdata=d.test_0)
+
+```
+```{r}
+
+#pred_prob <- predict.glm(model0, d.train_0, type = "response")
+
+d.test_0$pred <- predict(model0, newdata = d.test_0, type = "response")
+# Create a prediction object
+glm.pred0 <- roc(predictor = d.test_0$pred, response = d.test_0$hd, direction = "<")
+# Get performance
+auc.perf0 <- auc(glm.pred0) 
+ci.auc.perf0 <- ci.auc(glm.pred0)
+auc.perf0
+ci.auc.perf0
+
+d.test_01$pred <- predict(model01, newdata = d.test_01, type = "response")
+# Create a prediction object
+glm.pred01 <- roc(predictor = d.test_01$pred, response = d.test_01$hd, direction = "<")
+# Get performance
+auc.perf01 <- auc(glm.pred01) 
+ci.auc.perf01 <- ci.auc(glm.pred01)
+auc.perf01
+ci.auc.perf01
+
+d.test_012$pred <- predict(model012, newdata = d.test_012, type = "response")
+# Create a prediction object
+glm.pred012 <- roc(predictor = d.test_012$pred, response = d.test_012$hd, direction = "<")
+# Get performance
+auc.perf012 <- auc(glm.pred012) 
+ci.auc.perf012 <- ci.auc(glm.pred012)
+auc.perf012
+ci.auc.perf012
+
+d.test_0123$pred <- predict(model0123, newdata = d.test_0123, type = "response")
+# Create a prediction object
+glm.pred0123 <- roc(predictor = d.test_0123$pred, response = d.test_0123$hd, direction = "<")
+# Get performance
+auc.perf0123 <- auc(glm.pred0123) 
+ci.auc.perf0123 <- ci.auc(glm.pred0123)
+auc.perf0123
+ci.auc.perf0123
+
+
+```
+```{r}
+#FP
+label <- paste0("Model ", 1:4)
+mean  <- c(ci.auc.perf0[2], ci.auc.perf01[2], ci.auc.perf012[2], ci.auc.perf0123[2])
+lower <- c(ci.auc.perf0[1], ci.auc.perf01[1], ci.auc.perf012[1], ci.auc.perf0123[1])
+upper <- c(ci.auc.perf0[3], ci.auc.perf01[3], ci.auc.perf012[3], ci.auc.perf0123[3])
+
+df <- data.frame(label, mean, lower, upper)
+df$label <- factor(df$label, levels=rev(df$label))
+
+fp <- ggplot(data=df, aes(x=label, y=mean, ymin=lower, ymax=upper)) +
+        geom_pointrange() + 
+        coord_flip() +  # flip coordinates (puts labels on y axis)
+        xlab("Models") + ylab("AUC (95% CI)") +
+        theme_bw()  # use a white background
+
+print(fp)
+```
+
+
+
+```{r}
+#Clustering similar patients at risk for treatment groups
+#Load the data
+heart_disease = read.csv("heart_disease_patients.csv")
+
+
+head(heart_disease, n = 10)
+
+#Check that we have numric varibales for clustering
+lapply(heart_disease, is.numeric)
+
+#Remove ID 
+heart_disease = heart_disease[, ! (names(heart_disease) %in% c("id"))]
+
+#Scaling data 
+scaled = scale(heart_disease)
+```
+
+```{r}
+wcss <- vector() # Create an empty vector
+
+for (i in 1:20) wcss[i] <- sum(kmeans(heart_disease, i)$withinss)
+plot(1:20, wcss, type = "b", main = paste("Clusters of clients"), xlab = "Number of clusters", ylab = "WCSS")
+```
+
+```{r}
+#Set the seed, so results are reproducible
+set.seed(420)
+
+#Select # of clusters
+k = 5
+
+#Run the k-means algorithms
+first_clust = kmeans(scaled, centers = k, nstart = 1)
+
+#Number of patients in each group
+first_clust$size
+
+#Set the seed
+set.seed(007)
+
+#Run the k-means algorithms
+k = 5
+second_clust = kmeans(scaled, centers = k, nstart= 2)
+
+#Number of patients in each group
+second_clust$size
+
+#Adding cluster assignments to the data
+heart_disease["first_clust"] = first_clust$cluster
+heart_disease["second_clust"] = second_clust$cluster
+
+
+
+#Create the plots of age and chol for the first clustering algorithm
+plot_one = ggplot(heart_disease, aes(x=age, y=chol, color=as.factor(first_clust))) + geom_point()
+plot_one
+
+#Create the plots of age and chol for the second clustering algorithm
+plot_two = ggplot(heart_disease, aes(x=age, y=chol, color=as.factor(second_clust))) + geom_point()
+plot_two
+
+#Run hierarchical clustering with complete linkage
+hier_clust_1 = hclust(dist(scaled), method= 'complete')
+
+#Plot the dendogram
+plot(hier_clust_1)
+
+# getting cluster assignments based on number of selected clusters
+hc_1_assign <- cutree(hier_clust_1, k = 5)
+
+#Run hierarchical clustering with single linkage
+hier_clust_2 = hclust(dist(scaled), method = 'single')
+
+#Plot the dendogram
+plot(hier_clust_2)
+
+#Getting cluster assignments 
+hc_2_assign <- cutree(hier_clust_2, k = 5)
+
+
+```
+

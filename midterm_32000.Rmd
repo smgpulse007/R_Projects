@@ -1,0 +1,427 @@
+---
+title: "MScBMI 32000 Midterm"
+author: "Shailesh Dudala"
+date: "February 18, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Directions 
+There are a total of 8 problems, out of which 7 needs to be completed. Each problem is 10 points. Problem 8 is a bonus question. You may consider submitting your answer to Problem 8 instead of another; please specify which problem you wish to replace at the end (see Footnote). Submissions are to be made in HTML only.
+
+
+Use the space below each question to type in your answers. Any code you write must be encapsulated within ```r section. This is crucial! Do not simpy write code in text - any code you write should be executable. 
+
+```{r, warning=FALSE, message=FALSE}
+# Clear up stuff and load in libraries
+rm(list=ls())
+library(plyr)
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(tidyr)
+
+```
+
+
+## Problem 1 : Probability (10 points)
+1.1. In a city, there are only three major manufacturing companies that make a product: A, B, and C. Company A has a 40% market share, while B has a 30% market share. A survey found out that 3% of company A's product was defective. The same survery discovered that 6% of B's product was defective, and 9% of C's product was defective. 
+
+(a) (4 points) Complete the following table of probabilities. 
+Ans.
+
+Company  |      Good         |      Bad        | Total
+---------|-------------------|-----------------|----------
+A        |       0.37        |    0.03         | 0.4
+B        |       0.24        |    0.06         | 0.3
+C        |       0.21        |    0.09         | 0.3
+
+
+(b) (3 points) What is the probability that a randomly chosen part is defective?
+
+Ans. 0.18/1.00 = 0.18
+
+(c) (3 points) What is the probability that a defective product came from company B?
+
+Ans. 0.06/0.3 = 0.20
+ 
+ 
+## Problem 2: Regression Concepts
+2.1. You are asked to determine whether influenza vaccines has an impact on the risk for hospitalization from influenza-like symptoms within 6 months. In other words, whether patients that are vaccinated for influenza have a lower risk for admission to the hospital for showing influenza-like symptoms within 6 months of the vaccine. (5 points total)
+
+
+(a) (2.5 points) Assume you are asked to do a logistic regression on a collected dataset. The primary response variable is whether the patient was hospitalized and primary predictor was whether the patient had an influenza vaccine in the six months prior to hospitalization. You perform the logistic regression and determine an odds ratio of 0.73 [95% confidence interval: 0.68-0.77] for the primary predictor, after incorporating possible confounders. What can you conclude from this study?     
+Ans. If the patient gets a vaccine in the six months prior to hospitalization, there would be an expected decrease in the chance of being hospitalized on average by 27%, the 95%CI is [0.68-0.77] which means we can expect a decrease in the chance of hospitalization from anywhere between 32% and 23%.
+
+(b) (2.5 points) You are asked to do one more logistic regression on the collected dataset. The primary response variable is whether the patient was hospitalized and primary predictor was the number of clinic visits the patient had in the six months prior to hospitalization. You perform the logistic regression and determine an odds ratio of 0.87 [95% confidence interval is 0.72-1.14], after incorporating possible confounders. What can you conclude from this study?    
+Ans. The study would be inconclusive because the confidence intervals are [0.72-1.14] which say that it can either decrease or increase.
+
+
+2.2. A survery-based study was conducted to record the starting salary of recent graduates. A 1000 recent graduates answered the survery and the following are the elements in the datasets. (5 points total)
+
+(1) X1 : GPA, GPA of graduate  
+(2) IQ (X2): Intelligent Quotient of the graduate  
+(3) Gender (X3): 1 for Female, 0 for Male   
+(4) Interaction variable between GPA and IQ (X4)   
+(5) Interaction variable between GPA and Gender (X5)    
+(6) Salary: Starting salary of graduate (the response Y, in thousands of dollars)  
+
+Suppose we do a least-squares fit on the model, and get beta_0 = 50, beta_1 = 20, beta_2 = 0.07, beta_3 = 35, beta_4 = 0.01 and beta_5 = -10. Assume all betas had p-value < 0.001.  
+
+Salary = 50 + 20GPA + 0.07IQ + 35Gender + 0.01(GPA*IQ) - 10(GPA*Gender) 
+
+Which of the following are TRUE or FALSE? 
+
+(a) (1 point) For a fixed value of IQ and GPA, males earn more on average than females.  
+Ans. False
+
+
+(b) (1 point) For a fixed value of IQ and GPA, females earn more on average than males.   
+Ans. False
+
+
+(c) (1 point) For a fixed value of IQ and GPA, males earn more on average than females provided that the GPA is high enough.  
+Ans. True
+#For male (female = 0)
+Sal_m = 50 + 20*GPA + (0.07*IQ + 0.01*GPA*IQ)
+#For female (female =1)
+Sal_f = 50 + 20*GPA + 0.07*IQ + 35 + 0.01*GPA*IQ - 10*GPA
+Sal_f = 85 + 10*GPA + (0.07*IQ + 0.01*GPA*IQ)
+
+So, for a fixed value of GPA and IQ, Sal_m > Sal_f
+That is -> 50 +20*GPA > 85 + 10*GPA
+Therefore GPA > 3.5
+
+This implies that for a GPA of greater than 3.5, we can expect males to earn on average more than females, hence the statement is TRUE.
+
+(d) (1 point) Since the coefficient for GPQ x IQ interaction variable is very small, there is very little evidence of an interaction effect.  
+Ans. False, we need to see the p-value of the t-test to make any statistically sound inference for a given predictor variable or interaction variable. The maginitude of the co-efficient does not tell us anything about the interaction.
+
+
+(e) (1 point) Since the coefficient for GPA x Gender interaction variable is very small, there is very little evidence of an interaction effect.        
+Ans. False, we need to see the p-value of the t-test to make any statistically sound inference for a given predictor variable or interaction variable. The maginitude of the co-efficient does not tell us anything about the interaction.
+
+## Problem 3: Regression Models
+3.1 This question deals within application of linear regression. Download the dataset titled "credit_card_data.csv" from Files -> Midterm -> datasets. This records credit card balance for 400 individuals along with several other variables.
+
+```{r, echo=FALSE}
+# clear up everything
+rm(list=ls())
+
+# read in the dataset
+d.in <- read_csv("credit_card_data.csv")
+names(d.in)
+
+d.in <-d.in %>% 
+  mutate(Gender = as.factor(Gender))
+```
+
+Below is the data dictionary:  
+1) Income : current income (in \$1000, i.e. 14.891 is \$14,891)  
+2) Limit: credit limit (allowed credit limit in $)  
+3) Rating:  Credit rating  
+4) Cards: number of cards  
+5) Age: age in years   
+6) Education: in years      
+7) Gender: male or female  
+8) Student: student status  (Yes/No)      
+9) Married:  marriage status (Yes/No)  
+10) Ethnicity: ethnicity    
+11) Balance: credit card balance  (in $)
+
+
+
+
+a) (2 points) Create the following plots: Balance against Income, Balance against Age, and Balance against Rating. Balance is the response variable and is on the y-axis. Do you observe any linear trends? Make sure you label all axis properly. 
+
+
+```{r}
+## Insert code
+#Change to long from wide
+d.long <- gather(d.in, key= "measure", value= "value", c("Income", "Age", "Rating"))
+
+ggplot(d.long, aes(y = Balance, x = value, color = Balance)) + ylab("Credit Card Balance ($)") + geom_point()  + facet_wrap(~measure, scales = "free") + geom_smooth(method = 'lm') + #xlab("Age(in years)                      Income(in /$1000)                           Credit Rating")
+
+cat(">There is no linear trend observed in the Age vs the Credit Card Balance plot \n")
+cat(">There is a weak linear trend in the Income vs Credit Card Balance plot, however the data points are too scattered to actually say that the linear model is a decent fit \n")
+cat(">There is strong linear trend in the Rating vs Credit Card Balance plot considering the cloud of data point are close to the regression line(relatively against the other two predictor variables")
+
+```
+
+
+b) (2 points) Perform a simple regression to model Balance ~ Gender. What is the observed association between Balance and Gender? What is the null hypothesis for this particular model? From the regression, what can we say about the null hypothesis?   
+Ans.
+
+```{r}
+## Insert code
+g.lm <- lm(Balance ~ Gender, d.in)
+summary(g.lm)
+
+
+```
+The null hypothesis is that there IS NOT any association between Balance and Gender.
+The alternate hypothesis is that there IS a significant association between Balance and Gender.
+```{r}
+#The observed association is that changing from female(reference category) to male(predictor variable), the expected Credit Card Balance decreases on average by $19.73.
+#Which is basically saying that if the person is a male, we can expect his credit card balance to decrease on average by $19.73 as contrasted with females.
+pval_m <- summary(g.lm)$coefficient[,"Pr(>|t|)"][2]
+cat("The association between Credit Card Balance and change of Gender(Gender=male) is insignificant as the p-value is", pval_m,"(>0.001)", "\n")
+cat("Therefore, the null hypothesis is accepted.")
+```
+
+c) (2 points) Perform a simple regression to model Balance ~ Income. What is the observed association between Balance and Income? What is the null hypothesis for this particular model? From the regression, what can we say about the null hypothesis? 
+
+
+```{r}
+## Insert code
+i.lm <- lm(Balance ~ Income, d.in)
+summary(i.lm)
+
+```
+
+The null hypothesis is that there IS NOT any association between Balance and Gender.
+The alternate hypothesis is that there IS a significant association between Balance and Gender.
+```{r}
+#The observed association is that for a $1000 increase in the income, the expected Credit Card Balance increases on average by $6.0484.
+
+pval_i <- summary(i.lm)$coefficient[,"Pr(>|t|)"][2]
+cat("The association between Credit Card Balance and Income is statistically significant as the p-value is", pval_i,"(<0.001)", "\n")
+cat("Therefore, the null hypothesis is rejected and the alternate hypothesis is accepted")
+```
+
+d) (4 points total) Perform a multiple regression to model Balance ~ Age + Gender + Income + Rating.  
+
+```{r}
+# Insert code
+agir.lm <- lm(formula = Balance ~ Age + Gender + Income + Rating, family = "binomial", d.in)
+summary(agir.lm)
+```
+
+i. (1 point) What are the observed associations between Balance and each variable? Mention which associations are significant.      
+Ans. 
+Age : Holding all other predictor variables constant, for a unit increase in age(1 year), we could expect the Balance to decrease on average by $0.888
+
+Gender=Male : Holding all other predictor variables constant, for a change in gender from female(Gender = female) to male(Gender = male), we could expect the Balance to decrease on average by $3.3135
+
+Income : Holding all other predictor variables constant, for a \$1000 increase in the Income, we could expect the Balance to decrease on average by $7.56
+
+Rating : Holding all other predictor variables constant, for a unit increase in the Credit Rating, we could expect the Balance to increase on average by $3.93934
+
+
+ii. (1 point) Do you observe any difference in the associations in the multiple regression model vs. the simple regression model? Explain why or why not.    
+Ans. There is definitely a difference in the associations between the multiple regression model and simple regression model in terms of the coefficients for Gender and Income. This could be attributed to the fact that the mutiple regression models accounts for the rest of the predictor variables other than the specific predictor variable in the linear regression model.
+
+Also, looking at the R-squared for both the linear models
+
+iii. (2 point) Answer the following question: is at least one of predictors useful in predicting credit card balance of an individual? Explain why or why not.   
+Ans. 
+Yes, Income and Rating predictor variables have very low T-statistic p-values which are statisticallt significant for predicting the credit card balance of an individual as shown below :
+```{r}
+pval_inc <- summary(agir.lm)$coefficient[,"Pr(>|t|)"][4]
+cat("The association between Credit Card Balance and Income is statistically significant as the p-value is", pval_inc,"(<0.001)", "\n")
+pval_r <- summary(agir.lm)$coefficient[,"Pr(>|t|)"][5]
+cat("The association between Credit Card Balance and Credit Rating is statistically significant as the p-value is", pval_r,"(<0.001)", "\n")
+```
+
+
+
+## Problem 4: Model accuracy  
+4.1 Suppose we have a binary predictor P. We wish to test this predictor on a dataset with 1850 samples with the following class-wise split: Class 1 (with outcome=1) has 950 samples, Class 0 (with outcome=0) has 900 samples. After testing P on this test dataset, we determine that the predictor has 60% specificity and 80% sensitivity. Determine the following  of predictor P. 
+Ans.
+
+(a) (2 points) Accuracy --> TP+TN/total dataset = (760 + 540)/1850 = .70
+
+(b) (2 points) False-Discovery --> FP/(TP + FP) = 360/1120 = .32
+
+(c) (2 points) False-Positive rate --> FP/(FP + TN) = 360/900 = .4
+
+(d) (2 points) Positive Predictive value --> TP/(TP + FP) = 760/1120 = .678
+
+(e) (2 points) Negative Predictive value --> TN/(TN + FN) = 540/730 = .739
+
+
+
+
+
+## Problem 5: Miscellaneous
+
+5.1. (2 points) What is the main difference between supervised and unsupervised learning?     
+Ans. In Supervised Learning, measurements for the response variable Y are available and utilized whereas in Unsupervised Learning lacks the response variable.
+
+5.2. (2 points) Describe the bias-variance tradeoff is no more than two sentences.      
+Ans. If the flexibilty of the model increases, the bias decreases and the variance increases. However, if the flexibility of the model decreases, the bias increases and the variance decreases. So there is almost no chance for a model to have low variance and bias both.
+
+5.3. (2 points) Briefly (in no more than 2 sentences) explain what is meant by overfitting.   
+Ans. When, the training error is low and the test error is high, the trained model overfits the test data. This is termed as "overfitting".
+
+5.4 (2 points) The following code will not work when you un-comment them. Fix errors and write the correct code in the space below
+```{r}
+#d1 <- data.frame(
+#       v1 = c('A', 'B', 'B', 'A', 'A', 'B', 'B'),
+#       v2 = c('a', 'b', 'b', 'a', 'a', 'b', 'b'),
+#       v3 = c(1, 2, 2, 1, 1, 2, 2))
+
+#this_median <- d1 %>%
+#  select(v3) %>%
+#  median()
+
+# print(this_median)
+```
+Ans.
+```{r}
+d1 <- data.frame(
+       v1 = c('A', 'B', 'B', 'A', 'A', 'B', 'B'),
+       v2 = c('a', 'b', 'b', 'a', 'a', 'b', 'b'),
+       v3 = c(1, 2, 2, 1, 1, 2, 2))
+
+this_median <- d1 %>%
+  select(v3) %>%
+  summarize(median(v3))
+
+print(this_median)
+
+```
+
+
+
+5.5    
+
+(a) (1 point) The probability distribution in which all the values can occur with equal probability is called as ____   
+Ans. Uniform Distribution
+
+(b) (1 point) The median of the following set of the numbers : 45, 74, 22, 12, 14, 17, 19 is      
+Ans.
+```{r}
+x <- c(45, 74, 22, 12, 14, 17, 19)
+median(x)
+```
+
+
+
+## Problem 6: Logistic Regression (Application)
+6.1 This question deals with application of logistic regression. Download the Titanic dataset from Files -> midterm -> datasets. The dataset is a record of all passengers from the sinking of the RMS Titanic. The following is the data dictionary:         
+(1) Survived: Survival	of passenger 0 = No, 1 = Yes      
+(2) Pclass:	Ticket class	1 = 1st, 2 = 2nd, 3 = 3rd       
+(3) Sex:	Sex of passenger	        
+(4) Age:	Age in years	      
+(5) SibSp:	# of siblings / spouses aboard the Titanic	      
+(6) Parch:	# of parents / children aboard the Titanic	      
+(7) Embarked:	Port of Embarkation  
+
+(a) (5 points) Build a logistic regression model that explores the association between Survival and the other variabes. 
+```{r}
+### Insert code
+d.tit <- read_csv("titanic_dataset.csv")
+#Removing all NA values
+d.tit <- d.tit[!is.na(d.tit$Age),]
+d.tit <- d.tit[!is.na(d.tit$Embarked),]
+
+
+d.tit <- d.tit %>%
+  mutate(Survived = as.factor(Survived)) %>%
+  mutate(Pclass = as.factor(Pclass)) %>%
+  mutate(Sex = as.factor(Sex)) %>%
+  mutate(Embarked = as.factor(Embarked))
+         
+tit.glm <- glm(Survived ~., family = "binomial", d.tit)
+summary(tit.glm)
+
+```
+
+(b) (5 points) Using the coeffients and their 95% confidence interval, specify the contribution of each variable towards likelihood of survival in terms of increase or decrease in odds. 
+```{r}
+### Insert code
+exp(coef(tit.glm))
+```
+Pclass2: Holding all other predictor variables constant, for a change in class from 1st to 2nd, there is an expected decrease of the odds of survival on average by 72%.
+
+Pclass3: Holding all other predictor variables constant, for a change in class from 1st to 3rd, there is an expected decrease of the odds of survival on average by 92%.
+
+Sex=male: Holding all other predictor variables constant, for a change in gender from female to male, there is an expected decrease of the odds of survival on average by 93%.
+
+Age: Holding all other predictor variables constant, for a unit increase in age(increase by 1 year), there is an expected decrease of the odds of survival on average by 4.3%.
+
+SibSp: Holding all other predictor variables constant, for a unit increase in the number of siblings/spouses on board, there is an expected decrease of the odds of survival on average by 30%.
+
+Parch: Holding all other predictor variables constant, for a unit increase in the number of parents/children on board, there is an expected decrease of the odds of survival on average by 5.4%.
+
+EmbarkedQ: Holding all other predictor variables constant, for a change in port of Embarkation from 'C' to 'Q', there is an expected decrease of the odds of survival on average by 57%.
+
+EmbarkedS: Holding all other predictor variables constant, for a change in port of Embarkation from 'C' to 'S', there is an expected decrease of the odds of survival on average by 35%.
+
+
+## Problem 7 : Miscellaneous
+7.1 (2 points) A drug in a Phase I Clinical drug has a 33% success rate in curing a disease. What is the odds of success for the drug?      
+Ans. 
+```{r}
+odds <- (0.33)/(0.67)
+cat("The odds of success would be", odds)
+```
+
+
+7.2 (2 points) Answer TRUE or FALSE: In the event that the outcome is rare, a case-control study design is better than a retrospective study design.       
+Ans. True. 
+
+7.3 (2 points) In no more than two sentences, describe the difference between prediction using classification and regression models.    
+Ans. The classification predictive modeling deals with predicting a discrete class label output for a sample (Response variable is categorical). However, regression predictive modeling deals with predicting a continuous quantity output for a sample(Response variable is continuous). 
+
+7.4 (2 points) In a dataset where the number of predictors is much larger than the number of samples, would you expect the performance of a highly flexible model to be better or worse than an inflexible model? Explain briefly.  
+
+Ans. A highly flexible model would fit thre real world data perfectly but the lower flexibilty would decrease the real world fit. SO the performance of a high flex model increases.
+
+7.5 (2 points) Briefly describe the difference between parametric and non-parametric models for learning. List the advantages and disadvantages to each.      
+Ans. 
+Parametric Model : 
+A learning model that summarizes data with a set of parameters of fixed size (independent of the number of training examples) is called a parametric model. No matter how much data you throw at a parametric model, it won’t change its mind about how many parameters it needs.
+Advantages :
+Simpler: These methods are easier to understand and interpret results.
+Speed: Parametric models are very fast to learn from data.
+Less Data: They do not require as much training data and can work well even if the fit to the data is not perfect.
+Disadvantages :
+Constrained: By choosing a functional form these methods are highly constrained to the specified form.
+Limited Complexity: The methods are more suited to simpler problems.
+Poor Fit: In practice the methods are unlikely to match the underlying mapping function.
+
+Non-parametric Model :
+Nonparametric methods are good when you have a lot of data and no prior knowledge, and when you don’t want to worry too much about choosing just the right features.
+Advantages :
+Flexibility: Capable of fitting a large number of functional forms.
+Power: No assumptions (or weak assumptions) about the underlying function.
+Performance: Can result in higher performance models for prediction.
+Disadvantages :
+More data: Require a lot more training data to estimate the mapping function.
+Slower: A lot slower to train as they often have far more parameters to train.
+Overfitting: More of a risk to overfit the training data and it is harder to explain why specific predictions are made.
+
+
+
+## Problem 8 : Bonus
+
+8.1 A study was conducted on the effectiveness of a diagnostic test on predicting disease presence or absence. The results are given below:
+
+Table       |  Disease (Yes) |  Disease (No)  | Total
+------------|----------------|----------------|----------
+Test (pos)  |       80       |      90        | 170
+Test (neg)  |       20       |      810       | 830
+Total       |       100      |      900       | 1,000
+
+(a) (2.5 points) Calculate the slope for the study : Disease ~ Test (you do not need to write code for this)     
+Ans.
+
+
+(b) (2.5 points) What is the probability of a type-I error in the above test?       
+Ans. The probability of the Type-I error would be 90/900 = 0.1
+
+8.2 (5 points) A statistical test can be used be reject H0 (if the p-value is less than some cutoff), but it cannot be used to show that H0 is true because failure to reject H0 does not mean H0 is true. In other words, just because the p-value is large does not mean H0 is true. Suppose I have multiple datasets (derived using the same processes) and run the same statistical test on each dataset. I then take all the p-values and plot it on a histogram. From looking at the distribution of p-values, I see that it is clearly a uniform. In other words, all p-values from 0 to 1 (both large and small values) are equally likely. Can I claim that this is strong evidence that H0 is true? Explain your reasoning.         
+Ans. This is what the p-values would look like if all your hypotheses were null. However, this does not mean they actually are all null. It might mean that a small percentage of hypotheses are non-null.
+Applying an uncorrected rule like “Accept everything with p-value less than .05” is might give many false discoveries. I would recommend that this isn't enough evidence to prove that H0 is true. If there was any correction method to identify any non-null hypothesis, then there is a better chance at interpretation of the p-values that accept the null hypothesis.
+
+
+
+## Footnote:
+Fill in the following:      
+1. Please ignore Problem ___ and use my answer to Problem 8.    
+
